@@ -1,50 +1,107 @@
 const puppeteer = require('puppeteer');
+const Swal = require('sweetalert2');
+const { Chess } = require('chess.js');
 require('dotenv').config();
 
-const { EMAIL, PASSWORD } = process.env;
-const EmailInputSelector = "#username-input-field > div > input";
-const PasswordInputSelector = "#password-input-field > div > input";
-const NextBtnSelector = "#login";
-const ExitSuggestionBtnSelector = "#coach-nudges-modal > div > div.cc-modal-body > div > span";
-const NewGameBtnSelector = "body > div.base-layout > div.base-container > div.promo-component > div:nth-child(1) > div > a:nth-child(2)";
-const TimeControlBtnSelector = "#board-layout-sidebar > div > div.tab-container-component.tab-content-component > div > div.new-game-index-content > div.create-game-component > div:nth-child(1) > button";
-const PlayBtnSelector = "#board-layout-sidebar > div > div.tab-container-component.tab-content-component > div > div.new-game-index-content > div.create-game-component > button";
-const TimeBtnSelectors = {
-  '1m': "#board-layout-sidebar > div > div.tab-container-component.tab-content-component > div > div.new-game-index-content > div.create-game-component > div:nth-child(1) > div > div:nth-child(1) > div.time-selector-field-component > button:nth-child(1)",
-  '1m+1': "#board-layout-sidebar > div > div.tab-container-component.tab-content-component > div > div.new-game-index-content > div.create-game-component > div:nth-child(1) > div > div:nth-child(1) > div.time-selector-field-component > button:nth-child(2)",
-  "2m+1": "#board-layout-sidebar > div > div.tab-container-component.tab-content-component > div > div.new-game-index-content > div.create-game-component > div:nth-child(1) > div > div:nth-child(1) > div.time-selector-field-component > button:nth-child(3)",
-  "3m": "#board-layout-sidebar > div > div.tab-container-component.tab-content-component > div > div.new-game-index-content > div.create-game-component > div:nth-child(1) > div > div:nth-child(2) > div.time-selector-field-component > button:nth-child(1)",
-  "3m+2": "#board-layout-sidebar > div > div.tab-container-component.tab-content-component > div > div.new-game-index-content > div.create-game-component > div:nth-child(1) > div > div:nth-child(2) > div.time-selector-field-component > button:nth-child(2)",
-  "5m": "#board-layout-sidebar > div > div.tab-container-component.tab-content-component > div > div.new-game-index-content > div.create-game-component > div:nth-child(1) > div > div:nth-child(2) > div.time-selector-field-component > button:nth-child(3)",
-  "10m": "#board-layout-sidebar > div > div.tab-container-component.tab-content-component > div > div.new-game-index-content > div.create-game-component > div:nth-child(1) > div > div:nth-child(3) > div.time-selector-field-component > button:nth-child(1)",
-  "15m+10": "#board-layout-sidebar > div > div.tab-container-component.tab-content-component > div > div.new-game-index-content > div.create-game-component > div:nth-child(1) > div > div:nth-child(3) > div.time-selector-field-component > button:nth-child(2)",
-  "30m": "#board-layout-sidebar > div > div.tab-container-component.tab-content-component > div > div.new-game-index-content > div.create-game-component > div:nth-child(1) > div > div:nth-child(3) > div.time-selector-field-component > button:nth-child(3)",
+
+const {   EMAIL,  PASSWORD } = process.env;
+const emailInputSelector = "#username-input-field > div > input";
+const passwordInputSelector = "#password-input-field > div > input";
+const nextBtnSelector = "#login";
+const exitSuggestionBtnSelector = "#coach-nudges-modal > div > div.cc-modal-body > div > span";
+const newGameBtnSelector = "body > div.base-layout > div.base-container > div.promo-component > div:nth-child(1) > div > a:nth-child(2)";
+const timeControlBtnSelector = ".selector-button-button";
+const playBtnSelector = "#board-layout-sidebar > div > div.tab-container-component.tab-content-component > div > div.new-game-index-content > div.create-game-component > button";
+const timeBtnSelectors = {
+  // Bullet
+  '1m': '#board-layout-sidebar > div > div.tab-container-component.tab-content-component > div > div.new-game-index-content > div.create-game-component > div:nth-child(1) > div > div:nth-child(2) > div.time-selector-field-component > button:nth-child(1)',
+  '1m+1': '#board-layout-sidebar > div > div.tab-container-component.tab-content-component > div > div.new-game-index-content > div.create-game-component > div:nth-child(1) > div > div:nth-child(2) > div.time-selector-field-component > button:nth-child(2)',
+  '2m+1': '#board-layout-sidebar > div > div.tab-container-component.tab-content-component > div > div.new-game-index-content > div.create-game-component > div:nth-child(1) > div > div:nth-child(2) > div.time-selector-field-component > button:nth-child(3)',
+
+  // Blitz
+  '3m': '#board-layout-sidebar > div > div.tab-container-component.tab-content-component > div > div.new-game-index-content > div.create-game-component > div:nth-child(1) > div > div:nth-child(3) > div.time-selector-field-component > button:nth-child(1)',
+  '3m+2': '#board-layout-sidebar > div > div.tab-container-component.tab-content-component > div > div.new-game-index-content > div.create-game-component > div:nth-child(1) > div > div:nth-child(3) > div.time-selector-field-component > button:nth-child(2)',
+  '5m': '#board-layout-sidebar > div > div.tab-container-component.tab-content-component > div > div.new-game-index-content > div.create-game-component > div:nth-child(1) > div > div:nth-child(3) > div.time-selector-field-component > button:nth-child(3)',
+
+  // Rapid
+  '10m': '#board-layout-sidebar > div > div.tab-container-component.tab-content-component > div > div.new-game-index-content > div.create-game-component > div:nth-child(1) > div > div:nth-child(4) > div.time-selector-field-component > button:nth-child(1)',
+  '15m+10': '#board-layout-sidebar > div > div.tab-container-component.tab-content-component > div > div.new-game-index-content > div.create-game-component > div:nth-child(1) > div > div:nth-child(4) > div.time-selector-field-component > button:nth-child(2)',
+  '30m': '#board-layout-sidebar > div > div.tab-container-component.tab-content-component > div > div.new-game-index-content > div.create-game-component > div:nth-child(1) > div > div:nth-child(4) > div.time-selector-field-component > button:nth-child(3)',
+
+  // Daily
+  '1d': '#board-layout-sidebar > div > div.tab-container-component.tab-content-component > div > div.new-game-index-content > div.create-game-component > div:nth-child(1) > div > div:nth-child(5) > div.time-selector-field-component > button:nth-child(1)',
+  '3d': '#board-layout-sidebar > div > div.tab-container-component.tab-content-component > div > div.new-game-index-content > div.create-game-component > div:nth-child(1) > div > div:nth-child(5) > div.time-selector-field-component > button:nth-child(2)',
+  '7d': '#board-layout-sidebar > div > div.tab-container-component.tab-content-component > div > div.new-game-index-content > div.create-game-component > div:nth-child(1) > div > div:nth-child(5) > div.time-selector-field-component > button:nth-child(3)',
 };
 
-const getCurrentHtmlBoardAndTurn = async (page) => {
+const makeMove = async (page,startSquare, endSquare) => {
+  //StartSquare = "e2",EndSquare "e4"
+  startSquare = (startSquare.charCodeAt(0) - 96).toString() + startSquare[1];
+  endSquare = (endSquare.charCodeAt(0) - 96).toString() + endSquare[1];
+  //startSquare = "42", EndSquare "44"
+  const startSquareElementSelector = `.square-${startSquare}`;
+  const endSquareElementSelector = `.square-${endSquare}`;
+  await awaitAndClick(page, startSquareElementSelector);
+  await awaitAndClick(page, endSquareElementSelector);
+}
+
+const converToSq = async(coord) => {
+  const file = coord.charCodeAt(0) - 'a'.charCodeAt(0) + 1; // 'a' to 'h' -> 1 to 8
+  const rank = parseInt(coord.charAt(1), 10); // Rank '1' to '8' -> 1 to 8
+  return (rank - 1) * 8 + file;
+}
+
+function parseMove(fen, side, move, inSquare=false) {
+  // Ensure the FEN string includes all necessary fields
+  fen = fen.split("/").reverse().join("/");;
+
+  fen += ` ${side} KQkq - 0 1`;
+
+  // Initialize the chess board with the given FEN
+  const chess = new Chess(fen);
+
+  // Parse and make the move
+  const moveObj = chess.move(move, { sloppy: true });
+
+  if (!moveObj) {
+      return null;
+  }
+  const newFEN = moveObj.after;
+
+  // Retrieve the piece type, start square, and end square
+  if (!inSquare){
+      const startSquare = moveObj.from;
+      const endSquare = moveObj.to;
+      return {startSquare, endSquare, newFEN };
+  }
+  const startSquare = converToSq(moveObj.from);
+  const endSquare = converToSq(moveObj.to);
+  return {startSquare, endSquare, newFEN };
+
+}
+
+
+async function GetSide(page) {
+// Wait for the element to appear in the DOM
+await page.waitForSelector('.clock-bottom');
+// Retrieve the element handle
+return await page.evaluate(() => {
+      const bottom_clock_element = document.querySelector('.clock-bottom').classList;
+      color = bottom_clock_element[2]
+      alert(color)
+      return color[6];
+  });
+
+}
+const getCurrentHtmlBoard = async (page) => {
   await page.waitForSelector("#board-single");
   await page.waitForSelector("#board-single > svg.coordinates > text:nth-child(8)");
 
-  const result = await page.evaluate(() => {
-    const htmlBoard = document.getElementById("board-single").innerHTML;
-    
-    const blackClock = document.querySelector('.clock-bottom.clock-black');
-    const whiteClock = document.querySelector('.clock-top.clock-white');
-    
-    let turn;
-    if (blackClock.classList.contains('clock-player-turn')) {
-      turn = 'Black';
-    } else if (whiteClock.classList.contains('clock-player-turn')) {
-      turn = 'White';
-    } else {
-      turn = 'Unknown';
-    }
-    
-    return { htmlBoard, turn };
+  return await page.evaluate(() => {
+    return document.getElementById("board-single").innerHTML;
   });
-
-  return result;
 };
+
 
 const htmlBoardToColumnBListBoard = (htmlBoard) => {
   const pieceMap = {
@@ -132,48 +189,76 @@ const clickIfExists = async (page, selector) => {
     await page.click(selector);
   }
 };
+const movePopUp = async (page) => {
+  
+  return await page.evaluate(() => {
+    return new Promise((resolve) => {
+      Swal.fire({
+        title: 'Enter Move',
+        input: 'text',
+        showCancelButton: true,
+        confirmButtonText: 'Submit',
+        position: 'top',  // Position the prompt at the left
+        preConfirm: (value) => {
+          return value;
+        }
+      }).then((result) => {
+        resolve(result.value);     
+        });
+    });
+  });
+}
 
 (async () => {
   const browser = await puppeteer.launch({
     headless: false,
-    args: ['--window-size=1100,900'],
+    args: ['--window-size=1100,800'],
     executablePath: 'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe'
   });
 
   const page = await browser.newPage();
   await page.setViewport({ width: 1100, height: 900 });
   await page.goto('https://www.chess.com/login_and_go?returnUrl=https://www.chess.com/');
+  await page.waitForSelector('body'); // Wait for the body to be available for interaction
+  
 
-  await awaitAndType(page, EmailInputSelector, EMAIL);
-  await awaitAndType(page, PasswordInputSelector, PASSWORD);
-  await awaitAndClick(page, NextBtnSelector);
-  await clickIfExists(page, ExitSuggestionBtnSelector);
+  await awaitAndType(page, emailInputSelector, EMAIL);
+  await awaitAndType(page, passwordInputSelector, PASSWORD);
+  await awaitAndClick(page, nextBtnSelector);
+  await clickIfExists(page, exitSuggestionBtnSelector);
 
-  await awaitAndClick(page, NewGameBtnSelector);
-
+  await awaitAndClick(page, newGameBtnSelector);
   const TimeControl = await page.evaluate(() => {
     return prompt('Please enter Time Control (1m, 1m+1, 2m+1, | 3m, 3m+2, 5m | 10m, 15m+10, 30m):');
   });
 
-  await awaitAndClick(page, TimeControlBtnSelector);
-  await awaitAndClick(page, TimeBtnSelectors[TimeControl]);
-  await awaitAndClick(page, PlayBtnSelector);
-
-  const { htmlBoard, turn } = await getCurrentHtmlBoardAndTurn(page);
+  await awaitAndClick(page, timeControlBtnSelector);
+  await awaitAndClick(page, timeBtnSelectors[TimeControl]);
+  await awaitAndClick(page, playBtnSelector)
+  await page.waitForFunction('window.location.href.includes("https://www.chess.com/game")'); // Replace "newPage" with part of the new URL
+  const htmlBoard = await getCurrentHtmlBoard(page);
   const listBoard = htmlBoardToColumnBListBoard(htmlBoard);
   const ChessBoard = columnBListBoardToRowBoard(listBoard);
-  const FEN = chessBoardToFEN(ChessBoard);
-  
-  console.log("FEN:", FEN);
-  console.log("Turn:", turn);
+  let FEN = chessBoardToFEN(ChessBoard);
+  const side = await GetSide(page);
+  console.log("old FEN:", FEN);
+  console.log("Side:", side);
 
-  await page.waitForNavigation({ waitUntil: 'domcontentloaded' });
-
-  const move = await page.evaluate(() => {
-    return prompt('Enter your move in standard chess notation: ');
-  });
-
+  // Add SweetAlert2 to the page
+  await page.addScriptTag({ path: require.resolve('sweetalert2') });
+  const move = await movePopUp(page);
   console.log("Move:", move);
-
-  await browser.close();
+  try {
+    const { startSquare, endSquare, newFEN } = await parseMove(FEN, side, move); 
+    FEN = newFEN;
+    console.log("FEN:", FEN)
+    makeMove(page, startSquare, endSquare)     
+  }
+  catch (error) {
+    page.evaluate(() => {
+      alert('Invalid move. Please try again.');
+    })
+  }
+  
+  
 })();
